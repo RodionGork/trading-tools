@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>...</title>
+</head>
+<body>
+<center>
+<h1>...</h1>
+<h2></h2>
+<script>
+function update() {
+  // need to use binance.us if we detect user is in US
+  var url = 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=40';
+  var req = new XMLHttpRequest();
+  var recent = 5;
+  req.onreadystatechange = function() {
+    if (req.readyState == 4 && req.status == 200) {
+      var j = JSON.parse(req.responseText);
+      var p0 = Math.round(j[j.length-1][4]);
+      var p1 = 0;
+      var p2 = 0;
+      for (var i = 0; i < j.length; i++) {
+        p2 += parseFloat(j[i][1]);
+        if (i < recent) p1 += parseFloat(j[j.length - i - 1][1]);
+      }
+      p1 = Math.round(p1/recent);
+      p2 = Math.round(p2/j.length);
+      d1 = p0 - p1; if (d1 >= 0) d1 = '+' + d1;
+      d2 = p0 - p2; if (d2 >= 0) d2 = '+' + d2;
+      document.getElementsByTagName('h1')[0].innerText = p0;
+      document.getElementsByTagName('h2')[0].innerText = `${p1} (${d1})\n${p2} (${d2})`;
+      document.title = p0 + ' ' + d1 + ' ' + d2;
+    }
+  };
+  req.open('GET', url, true);
+  req.send(null);
+}
+setInterval(update, 3100);
+</script>
+</body>
+</html>
