@@ -20,16 +20,26 @@ function update() {
       var p0 = Math.round(j[j.length-1][4]);
       var p1 = 0;
       var p2 = 0;
+      var l2 = Number.POSITIVE_INFINITY;
+      var h2 = 0;
       for (var i = 0; i < j.length; i++) {
         p2 += parseFloat(j[i][1]);
-        if (i < recent) p1 += parseFloat(j[j.length - i - 1][1]);
+        var h = parseFloat(j[i][2]);
+        var l = parseFloat(j[i][3]);
+        l2 = Math.min(l2, l);
+        h2 = Math.max(h2, h);
+        if (i < recent) {
+          p1 += parseFloat(j[j.length - i - 1][1]);
+        }
       }
       p1 = Math.round(p1/recent);
       p2 = Math.round(p2/j.length);
+      l2 = Math.round(l2);
+      h2 = Math.round(h2);
       d1 = p0 - p1; if (d1 >= 0) d1 = '+' + d1;
       d2 = p0 - p2; if (d2 >= 0) d2 = '+' + d2;
       document.getElementsByTagName('h1')[0].innerText = p0;
-      document.getElementsByTagName('h2')[0].innerText = `${p1} (${d1})\n${p2} (${d2})`;
+      document.getElementsByTagName('h2')[0].innerText = `${p1} (${d1})\n${p2} (${d2})\n ${l2} .. ${h2}`;
       document.title = p0 + ' ' + d1 + ' ' + d2;
     }
   };
