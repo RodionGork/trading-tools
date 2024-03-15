@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Test simple bot strategy</title>
+</head>
+<body>
+<center>
+  <input id="month" type="text" placeholder="YYYY-MM"/><br/>
+  <button onclick="doLoad()">Load</button>
+  <p id="output"></p>
+</center>
+<script>
+
+var api = 'https://api.binance.com';
+
+var output = document.getElementById('output');
+
+function klines(ts, per, cnt) {
+  if (typeof(cnt) === 'undefined') cnt = 1000;
+  var req = new XMLHttpRequest();
+  req.open('GET', `${api}/api/v3/klines?symbol=BTCUSDT&interval=${per}&limit=${cnt}&startTime=${ts}`, false);
+  try {
+    req.send();
+  } catch (e) {
+    console.log('Error thrown by klines: ' + e);
+    return [];
+  }
+  if (req.status != 200) {
+    console.log('Error calling klines: ' + req.status + ' ' + req.responseText);
+    return [];
+  }
+  return JSON.parse(req.responseText);
+}
+
+function fetchPeriod(t0, t1) {
+  var cnt = 1000;
+  var ticks = [];
+  var calls = 0;
+  function f() {
+    calls += 1;
+    output.innerText = 'calls: ' + calls;
+    var res = klines(t0, '1m', cnt);
+    for (var i = 0; i != res.length; i++) {
+      var row = res[i];
+      if (t1 > row[0]) ticks[ticks.length] = row.slice(1, 5);
+    }
+    t0 += cnt * 60000;
+    if (t1 > t0) {
+      setTimeout(f, 100);
+    } else {
+      window.ticks = ticks;
+      output.innerText = 'loaded';
+    }
+  }
+  f(t0);
+}
+
+function doLoad() {
+  var mon = document.getElementById('month').value;
+  if (!/^\d{4}\-\d{2}$/.test(mon)) {
+    alert('bad format');
+    return;
+  }
+  var ts0 = new Date(mon).getTime();
+  mon = mon.split('-').map((x) => parseInt(x));
+  if (mon[1] != 12) {
+    mon[1] += 1;
+  } else {
+    mon[0] += 1;
+    mon[1] = 0;
+  }
+  var ts1 = new Date(mon.join('-'));
+  fetchPeriod(ts0, ts1);
+}
+
+</script>
+</body>
+</html>

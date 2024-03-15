@@ -11,7 +11,7 @@
 <script>
 function update() {
   // need to use binance.us if we detect user is in US
-  var url = 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=40';
+  var url = 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=60';
   var req = new XMLHttpRequest();
   var recent = 5;
   req.onreadystatechange = function() {
