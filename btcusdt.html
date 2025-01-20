@@ -8,53 +8,71 @@
 <center>
 <h1>...</h1>
 <h2></h2>
-<p><i>query params "coin" and "mul" are supported</i></p>
+<p><i>query params "coin", "mul" and "rel" are supported</i></p>
 <script>
 var coin = location.href.match(/coin=([a-z]+)/i);
 coin = coin ? coin[1].toUpperCase() : 'BTC'; 
 var multiplier = location.href.match(/mul=(\d+)/);
 multiplier = multiplier ? multiplier[1] : 1;
+var rel = location.href.match(/rel=([a-z]+)/i);
+rel = rel ? rel[1].toUpperCase() : false;
 
-function update() {
+function klines(sym, interval, limit, fn) {
   // need to use binance.us if we detect user is in US
-  var url = 'https://api.binance.com/api/v3/klines?symbol=' + coin + 'USDT&interval=1m&limit=60';
+  var url = 'https://api.binance.com/api/v3/klines?symbol=' + sym +
+    'USDT&interval=' + interval + '&limit=' + limit;
   var req = new XMLHttpRequest();
-  var recent = 5;
   req.onreadystatechange = function() {
     if (req.readyState == 4 && req.status == 200) {
-      var j = JSON.parse(req.responseText);
-      for (var i = 0; i < j.length; i++) {
-        for (var k = 1; k <= 4; k++)
-          j[i][k] *= multiplier;
-      }
-      var p0 = Math.round(j[j.length-1][4]);
-      var p1 = 0;
-      var p2 = 0;
-      var l2 = Number.POSITIVE_INFINITY;
-      var h2 = 0;
-      for (var i = 0; i < j.length; i++) {
-        p2 += j[i][1];
-        var h = j[i][2];
-        var l = j[i][3];
-        l2 = Math.min(l2, l);
-        h2 = Math.max(h2, h);
-        if (i < recent) {
-          p1 += j[j.length - i - 1][1];
-        }
-      }
-      p1 = Math.round(p1/recent);
-      p2 = Math.round(p2/j.length);
-      l2 = Math.round(l2);
-      h2 = Math.round(h2);
-      d1 = p0 - p1; if (d1 >= 0) d1 = '+' + d1;
-      d2 = p0 - p2; if (d2 >= 0) d2 = '+' + d2;
-      document.getElementsByTagName('h1')[0].innerText = p0;
-      document.getElementsByTagName('h2')[0].innerText = `${p1} (${d1})\n${p2} (${d2})\n ${l2} .. ${h2}`;
-      document.title = p0 + ' ' + d1 + ' ' + d2;
+      fn(JSON.parse(req.responseText));
     }
-  };
+  }
   req.open('GET', url, true);
   req.send(null);
+}
+
+function update() {
+  var recent = 5;
+  var h1tag = document.getElementsByTagName('h1')[0];
+  var h2tag = document.getElementsByTagName('h2')[0]
+  klines(coin, '1m', 60, (j) => {
+    for (var i = 0; i < j.length; i++) {
+      for (var k = 1; k <= 4; k++)
+        j[i][k] *= multiplier;
+    }
+    var p0 = Math.round(j[j.length-1][4]);
+    var p1 = 0;
+    var p2 = 0;
+    var l2 = Number.POSITIVE_INFINITY;
+    var h2 = 0;
+    for (var i = 0; i < j.length; i++) {
+      p2 += j[i][1];
+      var h = j[i][2];
+      var l = j[i][3];
+      l2 = Math.min(l2, l);
+      h2 = Math.max(h2, h);
+      if (i < recent) {
+        p1 += j[j.length - i - 1][1];
+      }
+    }
+    p1 = Math.round(p1/recent);
+    p2 = Math.round(p2/j.length);
+    l2 = Math.round(l2);
+    h2 = Math.round(h2);
+    d1 = p0 - p1; if (d1 >= 0) d1 = '+' + d1;
+    d2 = p0 - p2; if (d2 >= 0) d2 = '+' + d2;
+    h1tag.innerText = p0;
+    h2tag.innerText = `${p1} (${d1})\n${p2} (${d2})\n ${l2} .. ${h2}`;
+    document.title = p0 + ' ' + d1 + ' ' + d2;
+    if (rel) {
+      klines(rel, '1m', 1, (jj) => {
+        var ratio = p0 / jj[0][4] / multiplier;
+        ratio = ratio.toString().substring(0, 5);
+        h2tag.innerText += '\n' + ratio;
+        document.title += ' ' + ratio;
+      });
+    }
+  });
 }
 setInterval(update, 3100);
 </script>
