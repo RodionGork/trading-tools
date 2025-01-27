@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>...</title>
+</head>
+<body>
+
+<center>
+<h1 id="curprice">...</h1>
+<canvas id="chart" style="width:95%;height:300px;border:1px solid #aaa;"></canvas>
+<br/>
+<button onclick="updateHist('3m')">1 day</button>
+<button onclick="updateHist('15m')">5 days</button>
+<button onclick="updateHist('1h')">20 days</button>
+
+<p><i>query params "coin", "mul" and "rel" are supported</i></p>
+
+<script>
+// need to use binance.us if we detect user is in US
+var apiBaseUrl = 'https://api.binance.com/api/v3/';
+
+var coin = location.href.match(/coin=([a-z]+)/i);
+coin = coin ? coin[1].toUpperCase() : 'TON'; 
+var rel = location.href.match(/rel=([a-z]+)/i);
+rel = rel ? rel[1].toUpperCase() : 'SUI';
+
+var chart = document.getElementById('chart');
+var ctx = chart.getContext('2d');
+
+function klines(sym, interval, limit, fn) {
+  var url = 'https://api.binance.com/api/v3/klines?symbol=' + sym +
+    'USDT&interval=' + interval + '&limit=' + limit;
+  var req = new XMLHttpRequest();
+  req.onreadystatechange = function() {
+    if (req.readyState == 4 && req.status == 200) {
+      fn(JSON.parse(req.responseText));
+    }
+  }
+  req.open('GET', url, true);
+  req.send(null);
+}
+
+function prices(symbols, fn) {
+  for (var i = 0; i < symbols.length; i++)
+    symbols[i] = symbols[i].toUpperCase() + 'USDT';
+  symbols = JSON.stringify(symbols);
+  var url = 'https://api.binance.com/api/v3/ticker/price?symbols=' + symbols;
+  var req = new XMLHttpRequest();
+  req.onreadystatechange = function() {
+    if (req.readyState == 4 && req.status == 200) {
+      var res = {};
+      var res1 = JSON.parse(req.responseText).forEach((v) => {
+        res[v.symbol.substring(0, v.symbol.length-4)] = v.price * 1});
+      fn(res);
+    }
+  }
+  req.open('GET', url, true);
+  req.send(null);
+}
+
+function updateCur() {
+  prices([coin, rel], (res) => {
+    var ratio = res[coin] / res[rel];
+    ratio = Number(ratio).toString().substring(0, 5);
+    document.title = ratio;
+    document.getElementById('curprice').innerText =
+      ratio + ' (' + res[coin] + ' / ' + res[rel] + ')';
+  });
+}
+
+function updateHist(interval) {
+  var hist = [];
+  klines(coin, interval, 480, (data) => {
+    hist[coin] = parseHist(data); tryDraw(hist); });
+  klines(rel, interval, 480, (data) => {
+    hist[rel] = parseHist(data); tryDraw(hist); });
+}
+
+function parseHist(d) {
+  for (i = 0; i < d.length; i++) {
+    var row = d[i];
+    d[i] = (row[1]*1 + row[2]*2 + row[3]*2 + row[4]*1) / 6;
+  }
+  return d;
+}
+
+function tryDraw(h) {
+  if (h[coin] === undefined || h[rel] === undefined) return;
+  var r = [];
+  var maxR = Number.NEGATIVE_INFINITY;
+  var minR = Number.POSITIVE_INFINITY;
+  for (var i = 0; i < h[coin].length; i++) {
+    r[i] = h[coin][i] / h[rel][i];
+    maxR = Math.max(maxR, r[i]);
+    minR = Math.min(minR, r[i]);
+  }
+
+  ctx.canvas.width = chart.clientWidth;
+  ctx.canvas.height = chart.clientHeight;
+  var hScale = chart.clientWidth / r.length;
+  var vScale = chart.clientHeight / (maxR - minR);
+  
+  ctx.font = '32px monospace';
+  ctx.fillStyle = 'red';
+  ctx.textBaseline = 'top';
+  ctx.fillText(('' + maxR).substring(0, 5), 0, 0);
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(('' + minR).substring(0, 5), 0, ctx.canvas.height);
+  for (var i = 1; i < r.length; i++) {
+    ctx.beginPath();
+    ctx.moveTo(Math.round((i-1) * hScale), Math.round((maxR - r[i-1]) * vScale));
+    ctx.lineTo(Math.round(i * hScale), Math.round((maxR - r[i]) * vScale));
+    ctx.stroke();
+  }
+}
+
+updateCur();
+setInterval(updateCur, 7001);
+
+updateHist('3m');
+</script>
+</body>
+</html>
