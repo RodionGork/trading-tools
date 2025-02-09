@@ -28,7 +28,19 @@ rel = rel ? rel[1].toUpperCase() : 'SUI';
 var chart = document.getElementById('chart');
 var ctx = chart.getContext('2d');
 
+function identityKline(interval, limit) {
+  var res = [];
+  var ts = new Date().getTime();
+  for (var i = 0; i < limit; i++)
+    res.push([ts, 1, 1, 1, 1]);
+  return res;
+}
+
 function klines(sym, interval, limit, fn) {
+  if (sym == 'USDT') {
+    fn(identityKline(interval, limit));
+    return;
+  }
   var url = 'https://api.binance.com/api/v3/klines?symbol=' + sym +
     'USDT&interval=' + interval + '&limit=' + limit;
   var req = new XMLHttpRequest();
@@ -42,14 +54,12 @@ function klines(sym, interval, limit, fn) {
 }
 
 function prices(symbols, fn) {
-  for (var i = 0; i < symbols.length; i++)
-    symbols[i] = symbols[i].toUpperCase() + 'USDT';
-  symbols = JSON.stringify(symbols);
+  symbols = JSON.stringify(symbols.filter((s) => s != 'USDT').map((s) => s+'USDT'));
   var url = 'https://api.binance.com/api/v3/ticker/price?symbols=' + symbols;
   var req = new XMLHttpRequest();
   req.onreadystatechange = function() {
     if (req.readyState == 4 && req.status == 200) {
-      var res = {};
+      var res = {USDT: 1.0};
       var res1 = JSON.parse(req.responseText).forEach((v) => {
         res[v.symbol.substring(0, v.symbol.length-4)] = v.price * 1});
       fn(res);
