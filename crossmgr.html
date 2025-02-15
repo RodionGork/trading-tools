@@ -3,12 +3,15 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>...</title>
+<style>
+  #chart {width:95%;height:300px;border:1px solid #aaa;}
+</style>
 </head>
 <body>
 
 <center>
 <h1 id="curprice">...</h1>
-<canvas id="chart" style="width:95%;height:300px;border:1px solid #aaa;"></canvas>
+<canvas id="chart" onclick="drawLine()"></canvas>
 <br/>
 <button onclick="updateHist('3m')">1 day</button>
 <button onclick="updateHist('15m')">5 days</button>
@@ -27,6 +30,7 @@ rel = rel ? rel[1].toUpperCase() : 'SUI';
 
 var chart = document.getElementById('chart');
 var ctx = chart.getContext('2d');
+var hist = [];
 
 function identityKline(interval, limit) {
   var res = [];
@@ -80,11 +84,19 @@ function updateCur() {
 }
 
 function updateHist(interval) {
-  var hist = [];
+  if (typeof(interval) == 'undefined') {
+    interval = curInterval;
+  } else {
+    curInterval = interval;
+  }
   klines(coin, interval, 480, (data) => {
-    hist[coin] = parseHist(data); tryDraw(hist); });
+    hist[coin] = parseHist(data);
+    prepareData();
+  });
   klines(rel, interval, 480, (data) => {
-    hist[rel] = parseHist(data); tryDraw(hist); });
+    hist[rel] = parseHist(data);
+    prepareData();
+  });
 }
 
 function parseHist(d) {
@@ -95,40 +107,66 @@ function parseHist(d) {
   return d;
 }
 
-function tryDraw(h) {
-  if (h[coin] === undefined || h[rel] === undefined) return;
+function prepareData() {
+  if (hist[coin] === undefined || hist[rel] === undefined) return;
   var r = [];
   var maxR = Number.NEGATIVE_INFINITY;
   var minR = Number.POSITIVE_INFINITY;
-  for (var i = 0; i < h[coin].length; i++) {
-    r[i] = h[coin][i] / h[rel][i];
+  for (var i = 0; i < hist[coin].length; i++) {
+    r[i] = hist[coin][i] / hist[rel][i];
     maxR = Math.max(maxR, r[i]);
     minR = Math.min(minR, r[i]);
   }
+  hist['_'] = r;
+  hist['_hi'] = maxR;
+  hist['_lo'] = minR;
+  tryDraw();
+}
 
+function tryDraw(barPos) {
+  var n = hist['_'].length;
   ctx.canvas.width = chart.clientWidth;
   ctx.canvas.height = chart.clientHeight;
-  var hScale = chart.clientWidth / r.length;
-  var vScale = chart.clientHeight / (maxR - minR);
+  var hScale = chart.clientWidth / n;
+  var vScale = chart.clientHeight / (hist['_hi'] - hist['_lo']);
   
   ctx.font = '32px monospace';
   ctx.fillStyle = 'red';
   ctx.textBaseline = 'top';
-  ctx.fillText(('' + maxR).substring(0, 5), 0, 0);
+  ctx.fillText(('' + hist['_hi']).substring(0, 5), 0, 0);
   ctx.textBaseline = 'bottom';
-  ctx.fillText(('' + minR).substring(0, 5), 0, ctx.canvas.height);
-  for (var i = 1; i < r.length; i++) {
+  ctx.fillText(('' + hist['_lo']).substring(0, 5), 0, ctx.canvas.height);
+  for (var i = 1; i < n; i++) {
     ctx.beginPath();
-    ctx.moveTo(Math.round((i-1) * hScale), Math.round((maxR - r[i-1]) * vScale));
-    ctx.lineTo(Math.round(i * hScale), Math.round((maxR - r[i]) * vScale));
+    ctx.moveTo(Math.round((i-1) * hScale), Math.round((hist['_hi'] - hist['_'][i-1]) * vScale));
+    ctx.lineTo(Math.round(i * hScale), Math.round((hist['_hi'] - hist['_'][i]) * vScale));
     ctx.stroke();
   }
+  if (typeof(barPos) != 'undefined') {
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#0044ff';
+    ctx.fillStyle = '#0044ff';
+    ctx.beginPath();
+    ctx.moveTo(0, barPos);
+    ctx.lineTo(chart.clientWidth, barPos);
+    ctx.stroke();
+    var linePrice = hist['_hi'] - (hist['_hi'] - hist['_lo']) * barPos / chart.clientHeight;
+    ctx.fillText(('' + linePrice).substring(0, 5), 0, barPos);
+  }
+}
+
+function drawLine() {
+    var x = event.clientX - chart.offsetLeft;
+    var y = event.clientY - chart.offsetTop;
+    tryDraw(y);
 }
 
 updateCur();
 setInterval(updateCur, 7001);
 
 updateHist('3m');
+setInterval(updateHist, 67001);
+
 </script>
 </body>
 </html>
