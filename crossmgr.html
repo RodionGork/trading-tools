@@ -124,6 +124,7 @@ function prepareData() {
 }
 
 function tryDraw(barPos) {
+  barPos = typeof(barPos) != 'undefined' ? barPos : null;
   var n = hist['_'].length;
   ctx.canvas.width = chart.clientWidth;
   ctx.canvas.height = chart.clientHeight;
@@ -131,7 +132,7 @@ function tryDraw(barPos) {
   var vScale = chart.clientHeight / (hist['_hi'] - hist['_lo']);
   
   ctx.font = '32px monospace';
-  ctx.fillStyle = 'red';
+  ctx.fillStyle = barPos === null ? 'red' : 'pink';
   ctx.textBaseline = 'top';
   ctx.fillText(('' + hist['_hi']).substring(0, 5), 0, 0);
   ctx.textBaseline = 'bottom';
@@ -142,10 +143,13 @@ function tryDraw(barPos) {
     ctx.lineTo(Math.round(i * hScale), Math.round((hist['_hi'] - hist['_'][i]) * vScale));
     ctx.stroke();
   }
-  if (typeof(barPos) != 'undefined') {
+  if (barPos !== null) {
     ctx.lineWidth = 1;
     ctx.strokeStyle = '#0044ff';
     ctx.fillStyle = '#0044ff';
+    ctx.font = 'bold ' + ctx.font;
+    if (barPos / chart.clientHeight < 1-1/1.618)
+      ctx.textBaseline = 'top';
     ctx.beginPath();
     ctx.moveTo(0, barPos);
     ctx.lineTo(chart.clientWidth, barPos);
