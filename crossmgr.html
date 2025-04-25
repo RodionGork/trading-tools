@@ -137,6 +137,16 @@ function tryDraw(barPos) {
   ctx.fillText(('' + hist['_hi']).substring(0, 5), 0, 0);
   ctx.textBaseline = 'bottom';
   ctx.fillText(('' + hist['_lo']).substring(0, 5), 0, ctx.canvas.height);
+  var vertLines = curInterval == '3m' ? 12 : 10;
+  for (var i = 1; i < vertLines; i++) {
+  	ctx.strokeStyle = (i % 2) ? '#cfc' : '#ccf';
+  	ctx.beginPath();
+  	var x = Math.round(i * chart.clientWidth / vertLines);
+  	ctx.moveTo(x, 0);
+  	ctx.lineTo(x, chart.clientHeight);
+  	ctx.stroke();
+  }
+  ctx.strokeStyle = '#000';
   for (var i = 1; i < n; i++) {
     ctx.beginPath();
     ctx.moveTo(Math.round((i-1) * hScale), Math.round((hist['_hi'] - hist['_'][i-1]) * vScale));
