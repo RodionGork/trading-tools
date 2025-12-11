@@ -80,6 +80,7 @@ function updateCur() {
     document.title = ratio;
     document.getElementById('curprice').innerText =
       ratio + ' (' + res[coin] + ' / ' + res[rel] + ')';
+    setTimeout(updateCur, 7001);
   });
 }
 
@@ -92,6 +93,7 @@ function updateHist(interval) {
   klines(coin, interval, 480, (data) => {
     hist[coin] = parseHist(data);
     prepareData();
+    setTimeout(updateHist, 31001);
   });
   klines(rel, interval, 480, (data) => {
     hist[rel] = parseHist(data);
@@ -130,7 +132,7 @@ function tryDraw(barPos) {
   ctx.canvas.height = chart.clientHeight;
   var hScale = chart.clientWidth / n;
   var vScale = chart.clientHeight / (hist['_hi'] - hist['_lo']);
-  
+
   ctx.font = '32px monospace';
   ctx.fillStyle = barPos === null ? 'red' : 'pink';
   ctx.textBaseline = 'top';
@@ -139,12 +141,12 @@ function tryDraw(barPos) {
   ctx.fillText(('' + hist['_lo']).substring(0, 5), 0, ctx.canvas.height);
   var vertLines = curInterval == '3m' ? 12 : 10;
   for (var i = 1; i < vertLines; i++) {
-  	ctx.strokeStyle = (i % 2) ? '#cfc' : '#ccf';
-  	ctx.beginPath();
-  	var x = Math.round(i * chart.clientWidth / vertLines);
-  	ctx.moveTo(x, 0);
-  	ctx.lineTo(x, chart.clientHeight);
-  	ctx.stroke();
+    ctx.strokeStyle = (i % 2) ? '#cfc' : '#ccf';
+    ctx.beginPath();
+    var x = Math.round(i * chart.clientWidth / vertLines);
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, chart.clientHeight);
+    ctx.stroke();
   }
   ctx.strokeStyle = '#000';
   for (var i = 1; i < n; i++) {
@@ -176,10 +178,8 @@ function drawLine() {
 }
 
 updateCur();
-setInterval(updateCur, 7001);
 
 updateHist('3m');
-setInterval(updateHist, 67001);
 
 </script>
 </body>
