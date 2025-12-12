@@ -17,6 +17,8 @@
 <button onclick="updateHist('15m')">5 days</button>
 <button onclick="updateHist('1h')">20 days</button>
 
+<p>Last update: <span id="lastupd">1000000</span> sec ago</p>
+
 <p><i>query params "coin", "mul" and "rel" are supported</i></p>
 
 <script>
@@ -31,6 +33,7 @@ rel = rel ? rel[1].toUpperCase() : 'SUI';
 var chart = document.getElementById('chart');
 var ctx = chart.getContext('2d');
 var hist = [];
+var lastUpd = 0;
 
 function identityKline(interval, limit) {
   var res = [];
@@ -40,7 +43,7 @@ function identityKline(interval, limit) {
   return res;
 }
 
-function klines(sym, interval, limit, fn) {
+function klines(sym, interval, limit, fn, fne) {
   if (sym == 'USDT') {
     fn(identityKline(interval, limit));
     return;
@@ -48,27 +51,32 @@ function klines(sym, interval, limit, fn) {
   var url = 'https://api.binance.com/api/v3/klines?symbol=' + sym +
     'USDT&interval=' + interval + '&limit=' + limit;
   var req = new XMLHttpRequest();
+  req.timeout = 60000;
   req.onreadystatechange = function() {
     if (req.readyState == 4 && req.status == 200) {
       fn(JSON.parse(req.responseText));
     }
   }
+  if (typeof(fne) == 'function') req.ontimeout = req.onerror = function() { fne(); }
   req.open('GET', url, true);
   req.send(null);
 }
 
-function prices(symbols, fn) {
+function prices(symbols, fn, fne) {
   symbols = JSON.stringify(symbols.filter((s) => s != 'USDT').map((s) => s+'USDT'));
   var url = 'https://api.binance.com/api/v3/ticker/price?symbols=' + symbols;
   var req = new XMLHttpRequest();
+  req.timeout = 30000;
   req.onreadystatechange = function() {
     if (req.readyState == 4 && req.status == 200) {
       var res = {USDT: 1.0};
       var res1 = JSON.parse(req.responseText).forEach((v) => {
         res[v.symbol.substring(0, v.symbol.length-4)] = v.price * 1});
+      lastUpd = new Date().getTime();
       fn(res);
     }
   }
+  if (typeof(fne) == 'function') req.ontimeout = req.onerror = function() { fne(); }
   req.open('GET', url, true);
   req.send(null);
 }
@@ -81,7 +89,7 @@ function updateCur() {
     document.getElementById('curprice').innerText =
       ratio + ' (' + res[coin] + ' / ' + res[rel] + ')';
     setTimeout(updateCur, 7001);
-  });
+  }, () => { console.log('prices err'); setTimeout(updateCur, 7001); });
 }
 
 function updateHist(interval) {
@@ -94,7 +102,7 @@ function updateHist(interval) {
     hist[coin] = parseHist(data);
     prepareData();
     setTimeout(updateHist, 31001);
-  });
+  }, () => { console.log('klines err'); setTimeout(updateHist, 31001); });
   klines(rel, interval, 480, (data) => {
     hist[rel] = parseHist(data);
     prepareData();
@@ -180,6 +188,10 @@ function drawLine() {
 updateCur();
 
 updateHist('3m');
+
+setInterval(()=>{
+  document.getElementById('lastupd').innerText = Math.floor((new Date().getTime() - lastUpd) / 1000);
+}, 700);
 
 </script>
 </body>
